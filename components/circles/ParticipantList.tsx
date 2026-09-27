@@ -12,6 +12,7 @@ export interface Participant {
 
 interface ParticipantListProps {
   participants: Participant[];
+  onSendReminder?: (participants: Participant[]) => void | Promise<void>;
 }
 
 type SortKey = "address" | "status";
@@ -82,8 +83,24 @@ function StatusBadge({ status }: { status: Participant["status"] }) {
   );
 }
 
-export function ParticipantList({ participants }: ParticipantListProps) {
+function exportParticipants(participants: Participant[]) {
+  const rows = [
+    ["Address", "Status", "Rounds paid"],
+    ...participants.map((participant) => [participant.address, participant.status, String(participant.roundsPaid)]),
+  ];
+  const csv = rows.map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(",")).join("\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `participants-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export function ParticipantList({ participants, onSendReminder }: ParticipantListProps) {
   const [sortKey, setSortKey] = useState<SortKey>("address");
+  const [selectedAddresses, setSelectedAddresses] = useState<Set<string>>(new Set());
+  const [reminderSent, setReminderSent] = useState(false);
 
   const sorted = useMemo(() => {
     const list = [...participants];
@@ -94,6 +111,37 @@ export function ParticipantList({ participants }: ParticipantListProps) {
     }
     return list;
   }, [participants, sortKey]);
+
+  const selected = participants.filter((participant) => selectedAddresses.has(participant.address));
+  const allSelected = participants.length > 0 && selected.length === participants.length;
+
+  function toggleSelected(address: string) {
+    setReminderSent(false);
+    setSelectedAddresses((current) => {
+      const next = new Set(current);
+      if (next.has(address)) next.delete(address);
+      else next.add(address);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    setReminderSent(false);
+    setSelectedAddresses(allSelected ? new Set() : new Set(participants.map((participant) => participant.address)));
+  }
+
+  async function sendReminder() {
+    if (!selected.length || !window.confirm(`Send a contribution reminder to ${selected.length} participant${selected.length === 1 ? "" : "s"}?`)) return;
+    await onSendReminder?.(selected);
+    setSelectedAddresses(new Set());
+    setReminderSent(true);
+  }
+
+  function exportSelected() {
+    if (!selected.length) return;
+    exportParticipants(selected);
+    setSelectedAddresses(new Set());
+  }
 
   return (
     <section className="rounded-lg border border-gray-200 dark:border-[var(--border)] bg-white dark:bg-[var(--content)]">
@@ -121,11 +169,21 @@ export function ParticipantList({ participants }: ParticipantListProps) {
         </div>
       </div>
 
+      {selected.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-[var(--ov-03)] px-4 py-3 dark:border-[var(--border)]" role="toolbar" aria-label="Bulk participant actions">
+          <span className="mr-auto text-xs font-medium text-[var(--text)]">{selected.length} selected</span>
+          <button type="button" onClick={sendReminder} className="rounded-md bg-[#4B6B76] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#3D5A64]">Send reminder</button>
+          <button type="button" onClick={exportSelected} className="rounded-md border border-[var(--ov-14)] px-3 py-1.5 text-xs font-medium text-[var(--text)] hover:bg-[var(--ov-07)]">Export selected CSV</button>
+        </div>
+      )}
+      {reminderSent && <p className="border-b border-gray-200 px-4 py-2 text-xs text-green-700 dark:border-[var(--border)] dark:text-green-400" role="status">Reminder queued for the selected participants.</p>}
+
       {/* Scrollable on mobile, full table on desktop */}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[480px] text-left text-sm">
           <thead>
             <tr className="border-b border-gray-100 dark:border-[var(--border)] text-xs uppercase tracking-wide text-gray-400 dark:text-[var(--muted)]">
+              <th className="w-10 px-4 py-2 font-medium"><input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="Select all participants" /></th>
               <th className="px-4 py-2 font-medium">Participant</th>
               <th className="px-4 py-2 font-medium">Status</th>
               <th className="px-4 py-2 font-medium">Rounds paid</th>
@@ -134,6 +192,7 @@ export function ParticipantList({ participants }: ParticipantListProps) {
           <tbody className="divide-y divide-gray-100 dark:divide-[var(--border)]">
             {sorted.map((participant) => (
               <tr key={participant.address}>
+                <td className="px-4 py-3"><input type="checkbox" checked={selectedAddresses.has(participant.address)} onChange={() => toggleSelected(participant.address)} aria-label={`Select ${truncateAddress(participant.address)}`} /></td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <Avatar address={participant.address} />
