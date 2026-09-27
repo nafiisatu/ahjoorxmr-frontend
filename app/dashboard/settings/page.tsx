@@ -27,6 +27,7 @@ import PasskeyManager from "@/components/settings/PasskeyManager";
 import NotificationDigestPreferences from "@/components/settings/NotificationDigestPreferences";
 import { OPEN_SHORTCUTS_EVENT } from "@/components/ui/ShortcutsModal";
 import { Toggle } from "@/components/ui/Toggle";
+import AccountDataExport from "@/components/settings/AccountDataExport";
 import {
   defaultContactSharingSettings,
   saveContactSharingSettings,
@@ -395,13 +396,11 @@ function SettingsContent() {
             <HighContrastToggle />
           </section>
 
-          <button
-            onClick={handleSave}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#4B6B76] text-white text-sm font-semibold hover:opacity-90 transition-opacity"
-          >
-            {saved ? <CheckCircle2 size={16} /> : <Save size={16} />}
-            {saved ? "Saved" : "Save changes"}
-          </button>
+              {/* High Contrast Toggle */}
+              <HighContrastToggle />
+            </section>
+          </div>
+          <AccountDataExport />
         </div>
       )}
 

@@ -12,7 +12,8 @@ import ComparisonFloatingBar from "@/components/circles/ComparisonFloatingBar";
 import CircleComparison from "@/components/circles/CircleComparison";
 import { CircleComparisonProvider } from "@/contexts/CircleComparisonContext";
  import { useCircleViewPreference } from "@/hooks/useCircleViewPreference";
- import { useBookmarks } from "@/hooks/useBookmarks";
+import { useBookmarks } from "@/hooks/useBookmarks";
+import { useCircleTags } from "@/hooks/useCircleTags";
 import { useEmailVerification } from "@/hooks/useEmailVerification";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -156,6 +157,8 @@ function CirclesContent() {
 
    const { view, setView } = useCircleViewPreference();
    const { bookmarkedIds } = useBookmarks();
+   const { tags, assignedIds } = useCircleTags();
+   const [tagFilter, setTagFilter] = useState("");
   const { isVerified } = useEmailVerification();
   const { showToast } = useToast();
 
@@ -248,8 +251,8 @@ function CirclesContent() {
   }, [circles, tab, bookmarkedIds]);
 
   const displayCircles = useMemo(
-    () => filterCirclesByQuery(baseCircles, query),
-    [baseCircles, query]
+    () => filterCirclesByQuery(baseCircles, query).filter((circle) => !tagFilter || assignedIds(circle.id).includes(tagFilter)),
+    [assignedIds, baseCircles, query, tagFilter]
   );
 
   const isDiscover = tab === "discover";
@@ -350,6 +353,13 @@ function CirclesContent() {
               onQueryChange={setQuery}
               className="flex-1 sm:flex-none sm:w-52"
             />
+
+            {tags.length > 0 && (
+              <select aria-label="Filter by tag" value={tagFilter} onChange={(event) => setTagFilter(event.target.value)} className="h-9 rounded-lg border border-[var(--ov-14)] bg-[var(--content)] px-2 text-xs text-[var(--text)]">
+                <option value="">All tags</option>
+                {tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}
+              </select>
+            )}
 
             {/* View toggle */}
             <ViewToggle view={view} onChange={setView} />
