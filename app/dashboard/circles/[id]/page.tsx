@@ -31,8 +31,13 @@ import { enableAutoPay, getAutoPayConfig, recordAutoPayAttempt } from "@/lib/aut
 import CircleRulesView from "@/components/circles/CircleRulesView";
 import { CIRCLE_RULES_UPDATED_EVENT, getCircleRules, type CircleRulesRecord } from "@/lib/circleRules";
 import CircleImage from "@/components/circles/CircleImage";
+<<<<<<< HEAD
+import { DownloadAgreementButton } from "@/components/circles/DownloadAgreementButton";
+import type { ModerationEvent } from "@/types/discussion";
+=======
 import { JOIN_REQUESTS_UPDATED_EVENT } from "@/lib/joinRequests"; // (not actually used here, safe to omit if unused)
 import WaitlistPositionCard from "@/components/circles/WaitlistPositionCard";
+>>>>>>> main
 
 const CURRENT_WALLET = "0x23g43gdaa8f2c5b1e9d0f7a34bc6e12d8a9f5c3b";
 
@@ -516,6 +521,17 @@ export default function CircleDetailPage({
     [id]
   );
 
+  const handleModerationAction = useCallback((action: ModerationEvent) => {
+    const event: CircleEvent = {
+      id: `mod-${Date.now()}`,
+      type: "announcement_sent",
+      actor: action.actorAddress,
+      timestamp: new Date(),
+      meta: { moderation: action },
+    };
+    setAnnouncementEvents((prev) => [event, ...prev]);
+  }, []);
+
   const handleLeaveCircle = useCallback(async () => {
     if (!circle) return;
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -911,6 +927,35 @@ export default function CircleDetailPage({
           prefix="circle"
           title={`${circle.name} — Transaction History`}
         />
+
+        {/* Download Agreement Button - available to all members */}
+        {circle.isMember && (
+          <div className="pt-4 border-t border-[var(--ov-0f)]">
+            <DownloadAgreementButton
+              data={{
+                circle: {
+                  id: circle.id,
+                  name: circle.name,
+                  contribution: circle.contribution,
+                  duration: circle.duration,
+                  totalRounds: circle.totalRounds,
+                  currentRound: circle.currentRound,
+                  status: circle.status,
+                },
+                rules: circleRules ? circleRules.rules : [],
+                participants: circle.participants.map((p) => ({
+                  address: p.address,
+                  displayName: p.role,
+                })),
+                schedule: circle.roundHistory.map((r) => ({
+                  round: r.round,
+                  date: r.completedAt,
+                  payout: r.amount,
+                })),
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Discussion tab ── */}
@@ -921,11 +966,26 @@ export default function CircleDetailPage({
         hidden={activeTab !== "discussion"}
         className={activeTab === "discussion" ? "space-y-6" : ""}
       >
-        <DiscussionThread comments={comments} currentAddress={CURRENT_WALLET} />
-        <CommentComposer
-          onSubmit={handlePostComment}
-          disabled={!circle.isMember}
-        />
+        {circle.isMember && (
+          <>
+            <DiscussionThread
+              comments={comments}
+              currentAddress={CURRENT_WALLET}
+              circleId={id}
+              organizerAddress={circle.creator}
+              onModerationAction={handleModerationAction}
+            />
+            <CommentComposer
+              onSubmit={handlePostComment}
+              disabled={!circle.isMember}
+            />
+          </>
+        )}
+        {!circle.isMember && (
+          <div className="text-center py-8 text-[var(--muted)]">
+            Only circle members can participate in discussions.
+          </div>
+        )}
       </div>
 
       <ReportIssueModal

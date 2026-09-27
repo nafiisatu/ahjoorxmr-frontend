@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { MessageSquare } from "lucide-react";
 import type { Comment } from "@/types/discussion";
+import { ModerationMenu, RemovedMessagePlaceholder } from "./ModerationMenu";
+import { useCircleModeration } from "@/hooks/useCircleModeration";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -57,12 +59,45 @@ function Avatar({ address }: { address: string }) {
 interface CommentItemProps {
   comment: Comment;
   currentAddress: string;
+  isOrganizer: boolean;
+  isMuted: boolean;
+  onRemoveMessage: (id: string, author: string, reason?: string) => void;
+  onMuteParticipant: (address: string, reason?: string) => void;
 }
 
-function CommentItem({ comment, currentAddress }: CommentItemProps) {
+function CommentItem({ 
+  comment, 
+  currentAddress,
+  isOrganizer,
+  isMuted,
+  onRemoveMessage,
+  onMuteParticipant,
+}: CommentItemProps) {
   const isOwn =
     comment.author.toLowerCase() === currentAddress.toLowerCase();
   const label = comment.displayName ?? truncateAddress(comment.author);
+  const isRemoved = comment.isRemoved;
+
+  if (isRemoved) {
+    return (
+      <li className="flex gap-3">
+        <Avatar address="0x0000000000000000000000000000000000000000" />
+        <div className="min-w-0 flex-1">
+          <RemovedMessagePlaceholder removedBy={comment.removedBy} />
+        </div>
+        {isOrganizer && !isOwn && (
+          <ModerationMenu
+            isOrganizer={isOrganizer}
+            isMuted={isMuted}
+            messageId={comment.id}
+            authorAddress={comment.author}
+            onRemoveMessage={onRemoveMessage}
+            onMuteParticipant={onMuteParticipant}
+          />
+        )}
+      </li>
+    );
+  }
 
   return (
     <li className="flex gap-3">
@@ -90,6 +125,17 @@ function CommentItem({ comment, currentAddress }: CommentItemProps) {
           {comment.body}
         </p>
       </div>
+
+      {isOrganizer && !isOwn && (
+        <ModerationMenu
+          isOrganizer={isOrganizer}
+          isMuted={isMuted}
+          messageId={comment.id}
+          authorAddress={comment.author}
+          onRemoveMessage={onRemoveMessage}
+          onMuteParticipant={onMuteParticipant}
+        />
+      )}
     </li>
   );
 }
@@ -119,12 +165,30 @@ function EmptyState() {
 interface DiscussionThreadProps {
   comments: Comment[];
   currentAddress: string;
+  circleId: string;
+  organizerAddress: string;
+  /** Callback when a moderation action occurs (for activity feed logging) */
+  onModerationAction?: (action: { type: "message_removed" | "participant_muted"; targetAddress: string; targetMessageId?: string; actorAddress: string; timestamp: Date; reason?: string }) => void;
 }
 
 export default function DiscussionThread({
   comments,
   currentAddress,
+  circleId,
+  organizerAddress,
+  onModerationAction,
 }: DiscussionThreadProps) {
+  const {
+    isOrganizer,
+    isMuted,
+    removeMessage,
+    muteParticipant,
+  } = useCircleModeration({
+    circleId,
+    organizerAddress,
+    onModerationAction,
+  });
+
   const sorted = useMemo(
     () =>
       [...comments].sort(
@@ -132,6 +196,14 @@ export default function DiscussionThread({
       ),
     [comments]
   );
+
+  const handleRemoveMessage = (messageId: string, authorAddress: string, reason?: string) => {
+    removeMessage(messageId, authorAddress, reason);
+  };
+
+  const handleMuteParticipant = (address: string, reason?: string) => {
+    muteParticipant(address, reason);
+  };
 
   if (sorted.length === 0) {
     return <EmptyState />;
@@ -144,6 +216,10 @@ export default function DiscussionThread({
           key={comment.id}
           comment={comment}
           currentAddress={currentAddress}
+          isOrganizer={isOrganizer(currentAddress)}
+          isMuted={isMuted(comment.author)}
+          onRemoveMessage={handleRemoveMessage}
+          onMuteParticipant={handleMuteParticipant}
         />
       ))}
     </ul>
