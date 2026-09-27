@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { WalletProvider } from "@/contexts/WalletContext";
 import { ToastProvider } from "@/components/ui/Toast";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -49,6 +49,71 @@ function useServiceWorker() {
       // Registration failures (e.g. unsupported browser) are non-fatal.
     });
   }, []);
+}
+
+export type TableDensity = "comfortable" | "compact";
+
+const DENSITY_STORAGE_KEY = "table-density";
+
+type DensityContextValue = {
+  density: TableDensity;
+  setDensity: (density: TableDensity) => void;
+  toggleDensity: () => void;
+};
+
+const DensityContext = createContext<DensityContextValue | null>(null);
+
+export function useTableDensity(): DensityContextValue {
+  const ctx = useContext(DensityContext);
+  if (!ctx) {
+    throw new Error("useTableDensity must be used within a DensityProvider");
+  }
+  return ctx;
+}
+
+function readStoredDensity(): TableDensity | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DENSITY_STORAGE_KEY);
+    if (raw === "compact" || raw === "comfortable") return raw;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function DensityProvider({ children }: { children: React.ReactNode }) {
+  const [density, setDensityState] = useState<TableDensity>("comfortable");
+
+  useEffect(() => {
+    const stored = readStoredDensity();
+    if (stored) setDensityState(stored);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.dataset.density = density;
+  }, [density]);
+
+  const setDensity = (next: TableDensity) => {
+    setDensityState(next);
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(DENSITY_STORAGE_KEY, next);
+    } catch {
+      // Storage may be unavailable (private mode); density simply won't persist.
+    }
+  };
+
+  const toggleDensity = () => {
+    setDensity(density === "compact" ? "comfortable" : "compact");
+  };
+
+  return (
+    <DensityContext.Provider value={{ density, setDensity, toggleDensity }}>
+      {children}
+    </DensityContext.Provider>
+  );
 }
 
 function CookieConsent() {
@@ -177,12 +242,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeProvider>
-      <WalletProvider>
-        <ToastProvider>
-          {children}
-          <CookieConsent />
-        </ToastProvider>
-      </WalletProvider>
+      <DensityProvider>
+        <WalletProvider>
+          <ToastProvider>
+            {children}
+            <CookieConsent />
+          </ToastProvider>
+        </WalletProvider>
+      </DensityProvider>
     </ThemeProvider>
   );
 }
