@@ -10,6 +10,7 @@ import TxConfirmModal, { TxType, type TxAttempt, type TxFailure } from "@/compon
 import FeatureSpotlight from "@/components/ui/FeatureSpotlight";
 import type { Circle } from "@/types/circle";
 import BalanceBreakdownWidget from "@/components/wallet/BalanceBreakdownWidget"
+import AnnualSavingsSummary from "@/components/dashboard/AnnualSavingsSummary";
 
 interface PendingTx {
   type: TxType;
@@ -407,6 +408,7 @@ export default function DashboardOverviewPage() {
 
       {/* Widgets Flow */}
       <div className="space-y-6">
+        <AnnualSavingsSummary />
         {isClient ? layout.map((widget, idx) => {
           if (!widget.visible) return null;
           const isDragged = draggedIdx === idx;

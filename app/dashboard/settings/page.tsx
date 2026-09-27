@@ -26,6 +26,7 @@ import ActiveSessionsManager from "@/components/settings/ActiveSessionsManager";
 import PasskeyManager from "@/components/settings/PasskeyManager";
 import { OPEN_SHORTCUTS_EVENT } from "@/components/ui/ShortcutsModal";
 import { Toggle } from "@/components/ui/Toggle";
+import AccountDataExport from "@/components/settings/AccountDataExport";
 import {
   defaultContactSharingSettings,
   saveContactSharingSettings,
@@ -650,6 +651,7 @@ function SettingsContent() {
               <HighContrastToggle />
             </section>
           </div>
+          <AccountDataExport />
         </div>
       )}
 
