@@ -8,6 +8,7 @@ import AutoPayStatusBadge from "@/components/circles/AutoPayStatusBadge";
 import BookmarkButton from "@/components/circles/BookmarkButton";
 import { useCircleComparison } from "@/contexts/CircleComparisonContext";
 import CircleImage from "@/components/circles/CircleImage";
+import CircleTagControls from "@/components/circles/CircleTagControls";
 
 interface CircleGridCardProps {
   circle: DiscoverCircle;
@@ -83,6 +84,7 @@ export default function CircleGridCard({
           )}
         </div>
       </div>
+      <CircleTagControls circleId={circle.id} circleName={circle.name} />
 
       {/* Creator & Compare Checkbox Row */}
       <div className="flex items-center justify-between text-xs text-[var(--muted)]">
@@ -171,4 +173,3 @@ export default function CircleGridCard({
     </article>
   );
 }
-

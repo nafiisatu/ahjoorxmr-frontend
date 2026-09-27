@@ -7,6 +7,7 @@ import AutoPayStatusBadge from "@/components/circles/AutoPayStatusBadge";
 import BookmarkButton from "@/components/circles/BookmarkButton";
 import { useCircleComparison } from "@/contexts/CircleComparisonContext";
 import CircleImage from "@/components/circles/CircleImage";
+import CircleTagControls from "@/components/circles/CircleTagControls";
 
 interface CircleListRowProps {
   circle: DiscoverCircle;
@@ -87,6 +88,7 @@ export default function CircleListRow({
         <span className="text-xs text-[var(--muted)] font-mono truncate">
           {truncateAddress(circle.creator)}
         </span>
+        <CircleTagControls circleId={circle.id} circleName={circle.name} />
       </div>
 
       {/* ---- Action (always visible, right column on mobile) ---- */}
@@ -196,4 +198,3 @@ export default function CircleListRow({
     </div>
   );
 }
-
